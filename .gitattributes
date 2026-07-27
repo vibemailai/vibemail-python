@@ -1,0 +1,3 @@
+# Normalise to LF in the repository: the CI runners are Linux, and a
+# CRLF shell script in a workflow fails with a confusing interpreter error.
+* text=auto eol=lf
