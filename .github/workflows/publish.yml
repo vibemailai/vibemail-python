@@ -1,0 +1,43 @@
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # PyPI Trusted Publishing: PyPI verifies this workflow's OIDC identity
+      # directly, so there is no long-lived API token to store or leak.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -e ".[dev]" build twine
+      - run: ruff check .
+      - run: mypy src/vibemail
+      - run: pytest -q
+
+      # A tag that disagrees with the packaged version would publish something
+      # the changelog does not describe, and PyPI versions cannot be replaced.
+      - name: tag must match project version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(python -c 'import tomllib,pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "tag v$TAG does not match pyproject version $PKG" >&2
+            exit 1
+          fi
+
+      - run: python -m build
+      - run: twine check dist/*
+      - uses: pypa/gh-action-pypi-publish@release/v1
