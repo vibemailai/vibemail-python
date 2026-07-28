@@ -1,6 +1,6 @@
 # VibeMail SDK for Python
 
-Official SDK for the [VibeMail](https://vibemail.ai) transactional email API. Python 3.9+, standard library only — installing it pulls in nothing else.
+Official SDK for the [VibeMail](https://vibemail.ai) transactional email API. Python 3.9+, standard library only, installing it pulls in nothing else.
 
 ```bash
 pip install vibemail
@@ -32,7 +32,7 @@ Always send a `text` alternative alongside `html`. Mail with no plain-text part 
 
 ## Recipients
 
-One message goes to one recipient. To reach several people, use `batch()` — it sends a separate message to each, which is also what stops your recipients from seeing one another's addresses:
+One message goes to one recipient. To reach several people, use `batch()`, it sends a separate message to each, which is also what stops your recipients from seeing one another's addresses:
 
 ```python
 result = vibemail.batch([
@@ -51,7 +51,7 @@ Passing several addresses to `to` raises `ValueError` rather than quietly sendin
 
 ## Retries and idempotency
 
-Pass `idempotency_key` on anything you might retry. A repeat carrying the same key returns the original result instead of sending a second copy — which matters because a client that times out has no way of knowing whether the message went out.
+Pass `idempotency_key` on anything you might retry. A repeat carrying the same key returns the original result instead of sending a second copy, which matters because a client that times out has no way of knowing whether the message went out.
 
 ```python
 vibemail.send(
@@ -93,7 +93,7 @@ vibemail.send(
 )
 ```
 
-Anything you pass explicitly — `subject`, `html`, `text` — overrides the stored template, so you can vary one part without redefining the rest.
+Anything you pass explicitly - `subject`, `html`, `text`, overrides the stored template, so you can vary one part without redefining the rest.
 
 ## Errors
 
@@ -114,7 +114,7 @@ except VibeMailTimeoutError:
 
 | Argument | Default | |
 | --- | --- | --- |
-| `api_key` | — | Required, positional. |
+| `api_key` | - | Required, positional. |
 | `base_url` | `https://vibemail.ai` | Point at a self-hosted deployment. |
 | `timeout` | `30.0` | Per-request, in seconds. |
 | `max_retries` | `2` | Applies to `429` and `5xx` only. |

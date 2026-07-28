@@ -1,4 +1,4 @@
-"""Official VibeMail SDK for Python — transactional email.
+"""Official VibeMail SDK for Python, transactional email.
 
 The surface here is limited to endpoints the API actually serves. Methods for
 analytics and suppressions existed in an earlier draft and returned 404 against
@@ -72,7 +72,7 @@ def _one_recipient(to: Recipient) -> str:
         raise ValueError("`to` must contain a recipient address.")
     raise ValueError(
         f"`to` takes a single address, got {len(addresses)}. Use batch() to send to "
-        "several recipients — sending one message addressed to many would disclose "
+        "several recipients, sending one message addressed to many would disclose "
         "the list to all of them."
     )
 

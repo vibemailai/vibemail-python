@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "vibemail"
 version = "1.0.0"
-description = "Official VibeMail SDK for Python — transactional email"
+description = "Official VibeMail SDK for Python, transactional email"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
