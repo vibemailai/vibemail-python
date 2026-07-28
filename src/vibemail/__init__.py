@@ -24,7 +24,7 @@ __all__ = [
     "__version__",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 
 DEFAULT_BASE_URL = "https://vibemail.ai"
 DEFAULT_TIMEOUT = 30.0
@@ -86,6 +86,14 @@ def _serialize_scheduled_at(value: Optional[ScheduledAt]) -> Optional[str]:
         moment = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
         return moment.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     return value
+
+
+def _query(**params: Any) -> str:
+    """Build a query string with a stable key order, dropping anything unset."""
+    pairs = sorted((k, v) for k, v in params.items() if v is not None and v != "")
+    if not pairs:
+        return ""
+    return "?" + "&".join(f"{quote(str(k), safe='')}={quote(str(v), safe='')}" for k, v in pairs)
 
 
 def _compact(payload: Mapping[str, Any]) -> Dict[str, Any]:
@@ -280,3 +288,56 @@ class VibeMail:
     def list_templates(self) -> List[Dict[str, Any]]:
         """Templates stored on the account."""
         return cast(List[Dict[str, Any]], self._request("GET", "/v1/templates"))
+
+    # -- domains -----------------------------------------------------------
+
+    def list_domains(self, *, limit: Optional[int] = None,
+                     offset: Optional[int] = None) -> Dict[str, Any]:
+        """A page of domains. ``total`` counts them all, not just this page."""
+        return cast(Dict[str, Any],
+                    self._request("GET", "/v1/domains" + _query(limit=limit, offset=offset)))
+
+    def get_domain(self, domain_id: Union[str, int]) -> Dict[str, Any]:
+        """One domain, including the DNS records that verify it."""
+        path = f"/v1/domains/{quote(str(domain_id), safe='')}"
+        return cast(Dict[str, Any], self._request("GET", path))
+
+    def create_domain(self, domain: str) -> Dict[str, Any]:
+        """Add a domain. The reply carries the DNS records to publish; it stays
+        unverified until they resolve."""
+        return cast(Dict[str, Any], self._request("POST", "/v1/domains", {"domain": domain}))
+
+    def delete_domain(self, domain_id: Union[str, int]) -> Dict[str, Any]:
+        """Remove a domain. Mail already sent from it is unaffected."""
+        path = f"/v1/domains/{quote(str(domain_id), safe='')}"
+        return cast(Dict[str, Any], self._request("DELETE", path))
+
+    # -- contacts ----------------------------------------------------------
+
+    def list_contacts(self, *, search: Optional[str] = None, limit: Optional[int] = None,
+                      offset: Optional[int] = None) -> Dict[str, Any]:
+        """A page of contacts. ``search`` matches address or name."""
+        return cast(Dict[str, Any],
+                    self._request("GET", "/v1/contacts"
+                                  + _query(search=search, limit=limit, offset=offset)))
+
+    def create_contact(self, email: str, *, name: Optional[str] = None,
+                       notes: Optional[str] = None) -> Dict[str, Any]:
+        """Store a contact."""
+        payload = _compact({"email": email, "name": name, "notes": notes})
+        return cast(Dict[str, Any], self._request("POST", "/v1/contacts", payload))
+
+    def delete_contact(self, contact_id: Union[str, int]) -> Dict[str, Any]:
+        """Forget a contact."""
+        path = f"/v1/contacts/{quote(str(contact_id), safe='')}"
+        return cast(Dict[str, Any], self._request("DELETE", path))
+
+    # -- suppressions ------------------------------------------------------
+
+    def list_suppressions(self, *, limit: Optional[int] = None,
+                          offset: Optional[int] = None) -> Dict[str, Any]:
+        """Addresses that will not be sent to: hard bounces, complaints and
+        manual blocks. A send to one of these is dropped, not attempted."""
+        return cast(Dict[str, Any],
+                    self._request("GET", "/v1/suppressions" + _query(limit=limit, offset=offset)))
+

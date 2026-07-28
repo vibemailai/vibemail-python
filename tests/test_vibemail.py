@@ -271,3 +271,73 @@ def test_empty_body_returns_empty_dict():
             return 200, ""
 
     assert Empty().cancel("e1") == {}
+
+
+def test_list_domains_builds_a_stable_query():
+    c = Recorder([{"object": "list", "total": 0, "data": []}])
+    c.list_domains(limit=10, offset=20)
+    assert c.calls[0]["url"] == "https://vibemail.ai/v1/domains?limit=10&offset=20"
+    assert c.calls[0]["method"] == "GET"
+
+
+def test_list_domains_without_paging_sends_no_query():
+    c = Recorder([{"object": "list", "data": []}])
+    c.list_domains()
+    assert c.calls[0]["url"] == "https://vibemail.ai/v1/domains"
+
+
+def test_create_domain_posts_the_domain():
+    c = Recorder([{"object": "domain", "id": 3, "domain": "example.com"}])
+    out = c.create_domain("example.com")
+    assert c.calls[0]["method"] == "POST"
+    assert c.calls[0]["body"] == {"domain": "example.com"}
+    assert out["domain"] == "example.com"
+
+
+def test_domain_id_is_escaped_into_the_path():
+    c = Recorder([{"object": "domain", "deleted": True}])
+    c.delete_domain("7 8")
+    assert c.calls[0]["url"] == "https://vibemail.ai/v1/domains/7%208"
+    assert c.calls[0]["method"] == "DELETE"
+
+
+def test_get_domain_reads_one():
+    c = Recorder([{"object": "domain", "id": 3, "dns_records": [{"type": "TXT"}]}])
+    out = c.get_domain(3)
+    assert c.calls[0]["url"] == "https://vibemail.ai/v1/domains/3"
+    assert out["dns_records"][0]["type"] == "TXT"
+
+
+def test_contacts_search_is_encoded():
+    c = Recorder([{"object": "list", "data": []}])
+    c.list_contacts(search="a@b.c", limit=5)
+    assert c.calls[0]["url"] == "https://vibemail.ai/v1/contacts?limit=5&search=a%40b.c"
+
+
+def test_create_contact_omits_what_was_not_given():
+    c = Recorder([{"object": "contact", "id": 1}])
+    c.create_contact("a@b.c")
+    assert c.calls[0]["body"] == {"email": "a@b.c"}
+
+
+def test_create_contact_sends_optional_fields():
+    c = Recorder([{"object": "contact", "id": 1}])
+    c.create_contact("a@b.c", name="A", notes="met at a talk")
+    assert c.calls[0]["body"] == {"email": "a@b.c", "name": "A", "notes": "met at a talk"}
+
+
+def test_list_suppressions_reads_the_page():
+    c = Recorder(
+        [{"object": "list", "total": 1, "data": [{"email": "x@y.z", "reason": "hard_bounce"}]}]
+    )
+    out = c.list_suppressions()
+    assert c.calls[0]["url"] == "https://vibemail.ai/v1/suppressions"
+    assert out["data"][0]["reason"] == "hard_bounce"
+
+
+def test_a_plan_limit_is_raised_and_not_retried():
+    c = Recorder([http_error(402, '{"error":"Your plan allows 1 domain."}')], max_retries=3)
+    with pytest.raises(VibeMailError) as caught:
+        c.create_domain("second.com")
+    assert caught.value.status == 402
+    assert len(c.calls) == 1
